@@ -35,4 +35,5 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.aar', '*.jar'], exclude: [])
     implementation 'com.backblaze.b2:b2-sdk-core:3.1.0'
     implementation 'com.backblaze.b2:b2-sdk-okhttp:3.1.0'
+    implementation 'com.android.volley:volley:1.1.1'
 }
