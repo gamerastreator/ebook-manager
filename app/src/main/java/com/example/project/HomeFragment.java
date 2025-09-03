@@ -1,6 +1,7 @@
 package com.example.project;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +12,17 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 
 public class HomeFragment extends Fragment {
@@ -18,6 +30,7 @@ public class HomeFragment extends Fragment {
     private RecyclerView recyclerView;
     private BookAdapter adapter;
     private ArrayList<Book> bookList = new ArrayList<>();
+    private RequestQueue mRequestQueue;
 
     @Nullable
     @Override
@@ -27,17 +40,46 @@ public class HomeFragment extends Fragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         adapter = new BookAdapter(bookList, getContext());
         recyclerView.setAdapter(adapter);
+        mRequestQueue = Volley.newRequestQueue(getContext());
         return view;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        bookList.add(new Book("Reinas de leyenda", "Cristina Morató", "https://imagessl0.casadellibro.com/a/l/t7/40/9788401032140.jpg"));
-        bookList.add(new Book("Hábitos atómicos", "James Clear", "https://imagessl7.casadellibro.com/a/l/t7/87/9788418118887.jpg"));
-        bookList.add(new Book("La armadura de la luz", "Ken Follet", "https://imagessl5.casadellibro.com/a/l/t7/35/9788401032135.jpg"));
-        bookList.add(new Book("Maldita Roma", "Santiago Posteguillo", "https://imagessl7.casadellibro.com/a/l/t7/27/9788466676527.jpg"));
-        bookList.add(new Book("Cómo hacer que te pasen cosas buenas", "Marian Rojas Estapé", "https://imagessl2.casadellibro.com/a/l/t7/42/9788467053422.jpg"));
-        adapter.notifyDataSetChanged();
+        getBooks();
+    }
+
+    private void getBooks() {
+        String url = "https://www.googleapis.com/books/v1/volumes?q=mas+vendidos&langRestrict=es";
+        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            JSONArray items = response.getJSONArray("items");
+                            for (int i = 0; i < items.length(); i++) {
+                                JSONObject item = items.getJSONObject(i);
+                                JSONObject volumeInfo = item.getJSONObject("volumeInfo");
+                                String title = volumeInfo.optString("title");
+                                JSONArray authorsArray = volumeInfo.optJSONArray("authors");
+                                String author = (authorsArray != null && authorsArray.length() > 0) ? authorsArray.getString(0) : "No author";
+                                JSONObject imageLinks = volumeInfo.optJSONObject("imageLinks");
+                                String imageUrl = imageLinks != null ? imageLinks.optString("thumbnail") : "";
+
+                                bookList.add(new Book(title, author, imageUrl));
+                            }
+                            adapter.notifyDataSetChanged();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                error.printStackTrace();
+            }
+        });
+        mRequestQueue.add(request);
     }
 }
